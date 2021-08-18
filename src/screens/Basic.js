@@ -10,6 +10,7 @@ import {
   View,
   FlatList,
   TouchableWithoutFeedback,
+  Text,
 } from 'react-native';
 import {SharedElement} from 'react-navigation-shared-element';
 import {Colors} from 'react-native/Libraries/NewAppScreen';
@@ -146,6 +147,10 @@ const BasicScreen = ({navigation}) => {
             </SharedElement>
           </TouchableWithoutFeedback>
         </Animated.View>
+        <View style={styles.footer}>
+          <Text style={styles.name}>Anna Borino</Text>
+          <Text style={styles.bio}>This is my Bio!</Text>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -155,7 +160,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    justifyContent: 'space-evenly',
+    justifyContent: 'space-around',
   },
   header: {
     flex: 0.2,
@@ -163,8 +168,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   circleContainer: {
-    height: 80,
-    width: 80,
+    height: 60,
+    width: 60,
     borderRadius: 50,
     marginHorizontal: 16,
   },
@@ -174,7 +179,19 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
   body: {
-    flex: 0.8,
+    flex: 0.6,
+  },
+  footer: {
+    flex: 0.2,
+    justifyContent: 'center',
+  },
+  name: {
+    color: '#fff',
+    fontSize: 20,
+  },
+  bio: {
+    color: '#fff',
+    fontSize: 15,
   },
   image: {
     width: '100%',
