@@ -1,4 +1,5 @@
-import React, {useRef, useState} from 'react';
+/* eslint-disable react-native/no-inline-styles */
+import React, {useRef, useState, useEffect} from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
   FlatList,
   TouchableWithoutFeedback,
   Text,
+  Easing,
 } from 'react-native';
 import {SharedElement} from 'react-navigation-shared-element';
 import {Colors} from 'react-native/Libraries/NewAppScreen';
@@ -18,8 +20,42 @@ import {Colors} from 'react-native/Libraries/NewAppScreen';
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
+const data = [
+  {
+    id: 1,
+    photoUrl: require('../assets/profiles/1.jpg'),
+  },
+  {
+    id: 2,
+    photoUrl: require('../assets/profiles/2.jpg'),
+  },
+  {
+    id: 3,
+    photoUrl: require('../assets/profiles/3.jpg'),
+  },
+  {
+    id: 4,
+    photoUrl: require('../assets/profiles/4.jpg'),
+  },
+  {
+    id: 5,
+    photoUrl: require('../assets/profiles/5.jpg'),
+  },
+  {
+    id: 6,
+    photoUrl: require('../assets/profiles/6.jpg'),
+  },
+];
+
 const BasicScreen = ({navigation}) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [profiles, setProfiles] = useState(data);
+  const [overlayImage, setOverlayImage] = useState('');
+
+  useEffect(() => {
+    setTimeout(() => {
+      setOverlayImage(profiles[1].photoUrl);
+    }, 1000);
+  }, [profiles]);
 
   const isDarkMode = useColorScheme() === 'dark';
 
@@ -29,72 +65,68 @@ const BasicScreen = ({navigation}) => {
     justifyContent: 'center',
   };
 
-  const profiles = [
-    {
-      id: 1,
-      photoUrl: require('../assets/profiles/1.jpg'),
-    },
-    {
-      id: 2,
-      photoUrl: require('../assets/profiles/2.jpg'),
-    },
-    {
-      id: 3,
-      photoUrl: require('../assets/profiles/3.jpg'),
-    },
-    {
-      id: 4,
-      photoUrl: require('../assets/profiles/4.jpg'),
-    },
-    {
-      id: 5,
-      photoUrl: require('../assets/profiles/5.jpg'),
-    },
-    {
-      id: 6,
-      photoUrl: require('../assets/profiles/6.jpg'),
-    },
-  ];
-
   const pan = useRef(new Animated.ValueXY()).current;
+  const circleSize = useRef(new Animated.Value(0)).current;
+  const circlePosition = useRef(new Animated.ValueXY()).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: (evt, gestureState) => false,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: Animated.event([null, {dx: pan.x, dy: pan.y}]),
+      onPanResponderMove: Animated.event([null, {dx: pan.x, dy: pan.y}], {
+        useNativeDriver: false,
+      }),
       onPanResponderRelease: (evt, gestureState) => {
         if (gestureState.dx > 120) {
           Animated.spring(pan, {
             toValue: {x: SCREEN_WIDTH + 100, y: gestureState.dy},
-            useNativeDriver: true,
+            useNativeDriver: false,
           }).start(() => {
-            setCurrentIndex(currentIndex + 1);
-            pan.setValue({x: 0, y: 0}); // sets the original position
+            setProfiles(prof => prof.filter((item, i) => i !== 0));
+            opacity.setValue(1);
+
+            Animated.parallel([
+              Animated.spring(circlePosition, {
+                toValue: {x: 1, y: 1},
+                duration: 250,
+                easing: Easing.quad,
+                useNativeDriver: false,
+              }),
+              Animated.spring(circleSize, {
+                toValue: 1,
+                duration: 250,
+                easing: Easing.quad,
+                useNativeDriver: false,
+              }),
+            ]).start(() => {
+              pan.setValue({x: 0, y: 0}); // sets the original position
+              circleSize.setValue(0);
+              circlePosition.setValue({x: 0, y: 0});
+              opacity.setValue(0);
+            });
           });
         } else if (gestureState.dx < -120) {
           Animated.spring(pan, {
             toValue: {x: -SCREEN_WIDTH - 100, y: gestureState.dy},
-            useNativeDriver: true,
+            useNativeDriver: false,
           }).start(() => {
-            setCurrentIndex(currentIndex + 1);
             pan.setValue({x: 0, y: 0});
           });
         } else {
           Animated.spring(pan, {
             toValue: {x: 0, y: 0},
             friction: 4,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }).start();
         }
       },
     }),
   ).current;
 
-  const nextCardOpacity = pan.x.interpolate({
-    inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
-    outputRange: [1, 0, 1],
-    extrapolate: 'clamp',
+  const nextCardOpacity = opacity.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
   });
 
   const nextCardScale = pan.x.interpolate({
@@ -103,18 +135,59 @@ const BasicScreen = ({navigation}) => {
     extrapolate: 'clamp',
   });
 
-  const renderItem = ({item}) => (
-    <View style={styles.circleContainer}>
+  const animateCircleWidth = circleSize.interpolate({
+    inputRange: [0, 1],
+    outputRange: [60, 330],
+    extrapolate: 'clamp',
+  });
+
+  const animteCircleHeight = circleSize.interpolate({
+    inputRange: [0, 1],
+    outputRange: [60, 380],
+    extrapolate: 'clamp',
+  });
+
+  const animateCircleXPosition = circlePosition.x.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0],
+  });
+
+  const animateCircleYPosition = circlePosition.y.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 110],
+  });
+
+  const renderItem = ({item, index}) => (
+    <Animated.View style={styles.circleContainer}>
       <Image source={item.photoUrl} style={styles.circleImage} />
-    </View>
+    </Animated.View>
   );
 
   return (
     <SafeAreaView style={backgroundStyle}>
+      <Animated.View
+        style={[
+          styles.circleContainer,
+          {
+            height: animteCircleHeight,
+            width: animateCircleWidth,
+            transform: [
+              {translateX: animateCircleXPosition},
+              {translateY: animateCircleYPosition},
+            ],
+            opacity: nextCardOpacity,
+            top: 100,
+            left: 20,
+            position: 'absolute',
+            zIndex: 99,
+          },
+        ]}>
+        <Image source={overlayImage} style={styles.image} />
+      </Animated.View>
       <View style={styles.container}>
         <View style={styles.header}>
           <FlatList
-            data={profiles}
+            data={profiles.filter((item, i) => i !== 0)}
             renderItem={renderItem}
             keyExtractor={item => item.id}
             horizontal
@@ -134,16 +207,13 @@ const BasicScreen = ({navigation}) => {
             onPress={() =>
               navigation.push('Details', {
                 item: {
-                  id: 1,
-                  url: require('../assets/profiles/1.jpg'),
+                  id: profiles[0].id,
+                  url: profiles[0].photoUrl,
                 },
               })
             }>
-            <SharedElement id={`item.${1}.photo`}>
-              <Image
-                source={require('../assets/profiles/1.jpg')}
-                style={styles.image}
-              />
+            <SharedElement id={`item.${profiles[0].id}.photo`}>
+              <Image source={profiles[0].photoUrl} style={styles.image} />
             </SharedElement>
           </TouchableWithoutFeedback>
         </Animated.View>
